@@ -3,7 +3,7 @@
 - This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.2.12, and Spring Boot
   version 2.5.7 [Spring Boot](https://start.spring.io/).
 
-## Authors:    
+## Authors:
 
 > **Youssef Ali Bazina**
 >
@@ -84,75 +84,75 @@
         - It is responsible for continuously checking whether the queue is finished or not, queue is finished when:
             1. Machines before it finished consuming their products.
             2. Its “Tosend” queue which contains all the products stored in the queue is empty.
-        ```java
-        @Override
-        public void run() {
-        boolean CheckFinish = false;
-        while (!CheckFinish) {
-        CheckFinish = true;
-        
-                for (var Component : ChainBefore) {
-                    CheckFinish &= Component.IsFinished();
+            ```java
+            @Override
+            public void run() {
+            boolean CheckFinish = false;
+            while (!CheckFinish) {
+            CheckFinish = true;
+            
+                    for (var Component : ChainBefore) {
+                        CheckFinish &= Component.IsFinished();
+                    }
+            
+                    if (ID == 0) CheckFinish &= TheSystem.FinishedAiring.get();
+            
+                    if (CheckFinish) {
+                        MyQueue.BeforeFinished.set(true);
+                    }
+            
+                    CheckFinish &= MyQueue.ToSend.isEmpty();
                 }
-        
-                if (ID == 0) CheckFinish &= TheSystem.FinishedAiring.get();
-        
-                if (CheckFinish) {
-                    MyQueue.BeforeFinished.set(true);
-                }
-        
-                CheckFinish &= MyQueue.ToSend.isEmpty();
-            }
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            IsFinished.set(true);
-        }
-        ```
-    - Controller Thread:
-        - It is responsible for checking if the next machines are available (ready for receiving products) and if so, it
-          sends products from the `Tosend` queue to the next machine.
-        ```java
-        for (var component : ChainAfter) {
-            if (ToSend.isEmpty()) break;
-            if (component.IsAvailable()) {
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                String Message = "queue_" + ID + " machine_" + component.getID();
-                this.listener.SendData(Message);
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                component.Update();
-                ToSend.poll();
+                IsFinished.set(true);
             }
-        }
-        ```
-        - It is also responsible for receiving products from previous machine.
-        ```java
-        if (!ChainAfter.isEmpty() && !BeforeFinished.get())
-            synchronized (ToSend) {
-                while (ToSend.isEmpty() && !BeforeFinished.get()) {
+            ```
+    - Controller Thread:
+        - It is responsible for checking if the next machines are available (ready for receiving products) and if so, it
+          sends products from the `Tosend` queue to the next machine.
+            ```java
+            for (var component : ChainAfter) {
+                if (ToSend.isEmpty()) break;
+                if (component.IsAvailable()) {
                     try {
-                        ToSend.wait(10);
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
-            }
-            else if (ChainAfter.isEmpty()) {
-                while (!ToSend.isEmpty()) {
+                    String Message = "queue_" + ID + " machine_" + component.getID();
+                    this.listener.SendData(Message);
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    component.Update();
                     ToSend.poll();
                 }
             }
-        ```
+            ```
+        - It is also responsible for receiving products from previous machine.
+            ```java
+            if (!ChainAfter.isEmpty() && !BeforeFinished.get())
+                synchronized (ToSend) {
+                    while (ToSend.isEmpty() && !BeforeFinished.get()) {
+                        try {
+                            ToSend.wait(10);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                else if (ChainAfter.isEmpty()) {
+                    while (!ToSend.isEmpty()) {
+                        ToSend.poll();
+                    }
+                }
+            ```
 
 - Each machine consists of two threads, Component thread and Controller thread.
 
@@ -161,23 +161,23 @@
     - Controller Thread:
         - Receiving products from previous queues when it is available.
           ```java
-            synchronized (IsAvailable) {
-                while (IsAvailable.get() && !BeforeFinished.get()) {
-                    try {
-                        IsAvailable.wait(10);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            ```
+          synchronized (IsAvailable) {
+              while (IsAvailable.get() && !BeforeFinished.get()) {
+                  try {
+                      IsAvailable.wait(10);
+                  } catch (InterruptedException e) {
+                      e.printStackTrace();
+                  }
+              }
+          }
+          ```
         - Moving products to next queue.
           ```java
-            synchronized (NextQueue.GetQueueReference()) {
-                NextQueue.GetQueueReference().offer(true);
-                NextQueue.GetQueueReference().notify();
-            }
-            ```
+          synchronized (NextQueue.GetQueueReference()) {
+              NextQueue.GetQueueReference().offer(true);
+              NextQueue.GetQueueReference().notify();
+          }
+          ```
 
 - Websocket protocol was used to send notifications from backend to frontend, when a product is moved from a queue to a
   machine or from a machine to a queue.
@@ -241,4 +241,4 @@
 
 - Settings.
 
-![image](https://drive.google.com/uc?export=view&id=1EMwLHkQeHynV9jHuAoY9PGTcIWGkQwle) 
+![image](https://drive.google.com/uc?export=view&id=1EMwLHkQeHynV9jHuAoY9PGTcIWGkQwle)
